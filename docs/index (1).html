@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which Content Pages Should You Review First? A Validated Ranking Model vs. a Simple Rule</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1a1a1a;
+    --muted: #5a5a5a;
+    --accent: #1d5fae;
+    --border: #e0e0e0;
+    --card-bg: #f7f8fa;
+    --table-header: #eef2f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.6;
+  }
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 5rem;
+  }
+  header.hero {
+    padding: 3rem 0 2rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
+  }
+  h1 {
+    font-size: 1.9rem;
+    line-height: 1.25;
+    margin: 0 0 0.75rem;
+  }
+  .byline {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+  }
+  .abstract {
+    background: var(--card-bg);
+    border-left: 4px solid var(--accent);
+    padding: 1.25rem 1.5rem;
+    border-radius: 4px;
+    font-size: 0.98rem;
+  }
+  .abstract p { margin: 0; }
+  h2 {
+    font-size: 1.35rem;
+    margin-top: 3rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--border);
+  }
+  h3 {
+    font-size: 1.05rem;
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+  p { margin: 0.75rem 0; }
+  ul, ol { margin: 0.75rem 0; padding-left: 1.4rem; }
+  li { margin: 0.35rem 0; }
+  code {
+    background: var(--card-bg);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.88em;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.92rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--border);
+  }
+  th { background: var(--table-header); font-weight: 600; }
+  .scroll-x { overflow-x: auto; }
+  .figure {
+    margin: 1.5rem 0;
+    text-align: center;
+  }
+  .figure img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .figure .caption {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+    text-align: left;
+  }
+  .callout {
+    background: #fff8ec;
+    border: 1px solid #f0dca8;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    font-size: 0.94rem;
+  }
+  .no-go {
+    background: #fdecec;
+    border: 1px solid #f0b8b8;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    font-size: 0.94rem;
+  }
+  .no-go strong { color: #a13333; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .stat {
+    display: inline-block;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  code.block {
+    display: block;
+    background: var(--card-bg);
+    padding: 0.9rem 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    white-space: pre;
+    font-size: 0.85rem;
+    margin: 0.75rem 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>Which Content Pages Should You Review First? A Validated Ranking Model vs. a Simple Rule</h1>
+    <div class="byline">Haseeb Ullah &middot; FlyRank ML Internship Capstone</div>
+
+    <div class="abstract">
+      <p>
+        Content teams with limited review capacity face a basic prioritization question: which
+        pages, among thousands, are most worth checking first? Using a 30,000-page, 32-client
+        anonymized search performance snapshot, this project built a transparent rule baseline
+        and tested whether a validated learned model could out-rank it on a client-grouped
+        holdout — clients the model had never seen during training. Logistic Regression
+        outperformed both the rule baseline and a Random Forest at every precision@K reported
+        (0.65 / 0.72 / 0.645 at K = 20 / 50 / 200, against a test base rate of 0.511), while the
+        simple baseline itself scored no better than chance (ROC-AUC 0.500). The result ships as
+        a ranked, reason-coded action queue — three transparent archetypes covering roughly 36%
+        of pages — intended as decision-support for a human reviewer, not an automated action.
+        All code, data exclusions, and validation design are public and reproducible from the
+        linked repository.
+      </p>
+    </div>
+  </header>
+
+  <section>
+    <h2>Introduction</h2>
+    <p>
+      A content or SEO team rarely has the capacity to manually review every page they own.
+      Some pages are quietly declining and still worth protecting; others rank well but are
+      leaking clicks; most need no attention at all. Today that triage decision is often made
+      ad hoc — by whoever has time, working from memory or a spreadsheet.
+    </p>
+    <p>
+      This project turns that decision into a ranked, explainable queue: given a snapshot of a
+      page's activity, staleness, and search performance, which pages are most worth a human's
+      time first, and why? The goal was not to build the most complex model possible, but to
+      find out honestly whether a validated model actually beats a simple, readable rule at this
+      task — and to be equally honest about where it doesn't.
+    </p>
+  </section>
+
+  <section>
+    <h2>Data</h2>
+    <p>
+      This work uses the FlyRank internship starter dataset:
+      <span class="stat">30,000</span> rows, one per pseudonymized content item, spanning
+      <span class="stat">32</span> pseudonymized clients, with all metrics aggregated over a
+      trailing 90-day window at export time. It is a single cross-sectional snapshot, not a time
+      series — there is no repeated time axis in this file to split on.
+    </p>
+    <p>
+      The full ~79-million-row FlyRank warehouse release was also accessible for this project.
+      The starter snapshot was used instead so this capstone could build directly on four weeks
+      of already-audited work (signal checks, an honest grouped-split model, and a leakage
+      audit) rather than re-deriving all of it at warehouse scale. Extending this analysis to the
+      warehouse — with a genuinely time-aware label built from daily performance rows — is named
+      explicitly as future work in the Limitations section below, not silently skipped.
+    </p>
+    <h3>What was excluded, and why</h3>
+    <ul>
+      <li><code>content_id</code>, <code>client_id</code> — pseudonyms, used only for grouping
+        and joins, never as model features.</li>
+      <li><code>trend_pct</code>, <code>trend_direction</code>, and the label itself — the
+        outcome and its direct source, never used as inputs.</li>
+      <li>The raw 30- and 60-day trailing windows that <code>trend_pct</code> is computed from —
+        including these would let a model reconstruct the label almost exactly.</li>
+      <li>Provider/model metadata columns explicitly marked "not a model feature" in the
+        dataset's own documentation.</li>
+    </ul>
+    <p>
+      No client names, domains, URLs, or private search queries appear anywhere in this dataset,
+      this paper, or the underlying code — every identifier is a pseudonym used only for
+      grouping.
+    </p>
+  </section>
+
+  <section>
+    <h2>Methodology</h2>
+    <h3>Label</h3>
+    <p>
+      The target is an observed outcome in the snapshot itself: a page is labeled "declining"
+      when its trailing 30-day search impressions fell more than 20% versus the prior 30-day
+      window. Base rate across the full dataset: <span class="stat">54.2%</span>.
+    </p>
+    <h3>Baseline</h3>
+    <p>
+      The baseline is a transparent, hand-written rule with no fitted weights: a page scores as
+      "stale but visible" when it has gone <strong>180+ days without an update</strong> and still
+      has <strong>500+ impressions</strong> in the trailing 90 days. A person can read and audit
+      this rule in one sentence — that readability is the point of a baseline.
+    </p>
+    <h3>Features</h3>
+    <p>
+      90-day activity totals, derived rates (click-through rate, average search position,
+      engagement rate), keyword-context fields, and transparent tier/bucket columns —
+      all confirmed, programmatically, to exclude every label-derived or ID column listed above.
+    </p>
+    <h3>Validation design</h3>
+    <p>
+      Models were evaluated on a <strong>client-grouped 80/20 split</strong> (not a random row
+      split): every page from a given client stays entirely on one side of the split. This
+      matters because pages from the same client share client-level baseline traffic and style —
+      a random split would let a model partly learn "this is client X's pattern" instead of the
+      general one, overstating how well it would work on a client it has never seen. A random
+      split was deliberately not used for the headline numbers below for this reason.
+    </p>
+    <h3>Leakage checks</h3>
+    <p>
+      Every banned column (the label, its direct sources, and provider/model metadata) was
+      confirmed programmatically absent from the feature matrix — not just eyeballed. A
+      deliberate test additionally reintroduced a known-leaky column and confirmed the evaluation
+      harness reacted as expected, verifying that the "clean" result below wasn't clean by
+      accident.
+    </p>
+  </section>
+
+  <section>
+    <h2>Results</h2>
+    <p>
+      All three approaches — the rule baseline, Logistic Regression, and Random Forest — were
+      evaluated on the exact same client-grouped holdout, at the same metrics: precision@K (of
+      the top K the ranking flags, how many were actually declining?) and ROC-AUC, both reported
+      next to the test-set base rate.
+    </p>
+    <div class="scroll-x">
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Base rate (test)</th>
+            <th>ROC-AUC</th>
+            <th>Precision@20</th>
+            <th>Precision@50</th>
+            <th>Precision@200</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Baseline (rule)</td>
+            <td>0.511</td>
+            <td>0.500</td>
+            <td>0.450</td>
+            <td>0.620</td>
+            <td>0.535</td>
+          </tr>
+          <tr>
+            <td>Logistic Regression</td>
+            <td>0.511</td>
+            <td>0.582</td>
+            <td><strong>0.650</strong></td>
+            <td><strong>0.720</strong></td>
+            <td><strong>0.645</strong></td>
+          </tr>
+          <tr>
+            <td>Random Forest</td>
+            <td>0.511</td>
+            <td><strong>0.602</strong></td>
+            <td>0.550</td>
+            <td>0.500</td>
+            <td>0.455</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="figure">
+      <img src="capstone_model_vs_baseline.png" alt="Bar chart comparing precision@20, precision@50, and precision@200 for the baseline rule, Logistic Regression, and Random Forest, with a dashed line marking the base rate.">
+      <div class="caption">Precision@K for all three approaches against the test-set base rate (dashed line). Logistic Regression leads at every K reported.</div>
+    </div>
+
+    <h3>Two findings worth stating plainly</h3>
+    <p>
+      <strong>The hand-written baseline performed at chance</strong> on ROC-AUC (0.500) despite
+      beating the base rate at precision@50. A simple rule can look useful at one specific cutoff
+      while carrying no real ranking signal overall — reporting only one metric would have hidden
+      this.
+    </p>
+    <p>
+      <strong>Random Forest had the higher overall ROC-AUC (0.602 vs. 0.582) but lost to Logistic
+      Regression at every precision@K reported</strong> — including falling below the base rate
+      at K = 200 (0.455 vs. 0.511). A stronger-looking aggregate metric did not translate into a
+      better top-of-queue ranking, which is the metric that actually matters for a review queue.
+      Logistic Regression is the model this project's recommendations are built on, precisely
+      because of this gap, not despite it.
+    </p>
+  </section>
+
+  <section>
+    <h2>Limitations &amp; Honest Framing</h2>
+    <ul>
+      <li>
+        <strong>Correlational, not causal.</strong> This is a single cross-sectional snapshot.
+        The results show that staleness, CTR-vs-position, and the model's ranking were
+        <em>observed</em> to be <em>associated with</em> already-declining pages in this data —
+        not that refreshing a page will cause its traffic to recover. No intervention or
+        controlled comparison was run.
+      </li>
+      <li>
+        <strong>Tested on 32 clients, this slice only.</strong> The grouped holdout tests
+        generalization to unseen pages <em>within</em> these 32 pseudonymized clients — not to a
+        genuinely new client outside this dataset.
+      </li>
+      <li>
+        <strong>Warehouse-scale validation was not performed.</strong> A time-aware label built
+        from daily performance history across the full warehouse release would be a stronger
+        test, and is named here as concrete future work.
+      </li>
+      <li>
+        <strong>The baseline rule's coverage is thin.</strong> The <code>stale_but_visible</code>
+        archetype fired on only 17 of 30,000 rows (0.06%) — its two thresholds, taken together,
+        are strict enough that this rule alone flags almost nothing in this dataset. This is a
+        rule-design limitation worth naming, not a strength to imply.
+      </li>
+      <li>
+        <strong>Missing keyword-context data is not random</strong> — it follows content type, so
+        the model's read on some rows leans more on activity and staleness signals than on
+        keyword-context signals.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Ranked Recommendations</h2>
+    <p>
+      The validated ranking becomes an action queue: three transparent archetypes, each with a
+      trigger, a reason code, and an action — plus a fourth catch-all for pages the model flags
+      as elevated risk that neither rule catches.
+    </p>
+    <div class="scroll-x">
+      <table>
+        <thead>
+          <tr>
+            <th>Archetype</th>
+            <th>Trigger</th>
+            <th>Reason code</th>
+            <th>Action</th>
+            <th>Rows (of 30,000)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Stale but visible</td>
+            <td>180+ days since update, 500+ impressions/90d</td>
+            <td><code>stale_but_visible</code></td>
+            <td>Review for refresh</td>
+            <td>17 (0.06%)</td>
+          </tr>
+          <tr>
+            <td>Good position, weak CTR</td>
+            <td>Top-3 or page-1 position, CTR below that tier's median</td>
+            <td><code>weak_ctr_good_position</code></td>
+            <td>Review for CTR fix</td>
+            <td>5,870 (19.6%)</td>
+          </tr>
+          <tr>
+            <td>Model-flagged, rules silent</td>
+            <td>Top-20% predicted decline risk, neither rule above fired</td>
+            <td><code>model_flagged_decline_risk</code></td>
+            <td>Review, general</td>
+            <td>4,850 (16.2%)</td>
+          </tr>
+          <tr>
+            <td>None of the above</td>
+            <td>—</td>
+            <td><code>no_flag</code></td>
+            <td>No action</td>
+            <td>19,263 (64.2%)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="figure">
+      <img src="capstone_archetype_mix.png" alt="Horizontal bar chart showing the count of pages in each archetype: no_flag, weak_ctr_good_position, model_flagged_decline_risk, and stale_but_visible.">
+      <div class="caption">Distribution of the 30,000-page queue across archetypes. Roughly 36% of pages receive a review flag.</div>
+    </div>
+
+    <div class="callout">
+      <strong>Human review is required for every flagged row.</strong> This queue is
+      decision-support for a person, not an automated action. A reason code names the pattern
+      that matched — it is not a guarantee that the pattern is the true cause of that page's
+      situation.
+    </div>
+
+    <div class="no-go">
+      <strong>What should NOT be automated:</strong>
+      <ul>
+        <li>No auto-publishing of rewritten titles, meta, or content from this ranking.</li>
+        <li>No auto-deprioritizing or removing a page based solely on its model score.</li>
+        <li>No client-facing promises tied to this ranking — the evidence is correlational on
+          one snapshot, not a tested causal claim.</li>
+        <li>No applying this ranking, unmodified, to a client outside the 32 in this dataset.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reproducibility</h2>
+    <p>
+      Every step above — feature engineering, the grouped split, the leakage checks, and the
+      final ranking — is reproducible with a fixed random seed (<code>random_state = 42</code>)
+      from the notebooks below.
+    </p>
+    <ul>
+      <li><a href="https://github.com/HaseebAfridi65/HaseebFlyRankStarter" target="_blank" rel="noopener">Full repository</a></li>
+      <li><a href="https://github.com/HaseebAfridi65/HaseebFlyRankStarter/blob/main/work/notebooks/w04_baseline_score.ipynb" target="_blank" rel="noopener">Week 4 — baseline rule + signal checks</a></li>
+      <li><a href="https://github.com/HaseebAfridi65/HaseebFlyRankStarter/blob/main/work/notebooks/w05_model.ipynb" target="_blank" rel="noopener">Week 5 — first model + comparison</a></li>
+      <li><a href="https://github.com/HaseebAfridi65/HaseebFlyRankStarter/blob/main/work/notebooks/w06_validation_audit.ipynb" target="_blank" rel="noopener">Week 6 — honest split + leakage audit</a></li>
+      <li><a href="https://github.com/HaseebAfridi65/HaseebFlyRankStarter/blob/main/work/notebooks/w07_action_playbook.ipynb" target="_blank" rel="noopener">Week 7 — action playbook</a></li>
+      <li><a href="https://github.com/HaseebAfridi65/HaseebFlyRankStarter/blob/main/work/notebooks/capstone.ipynb" target="_blank" rel="noopener">Capstone notebook (this paper's source)</a></li>
+    </ul>
+    <p>To rerun: clone the repository, open each notebook in Google Colab, and run top to bottom — the first cell of each clones the repo and sets the working directory automatically.</p>
+    <code class="block">git clone https://github.com/HaseebAfridi65/HaseebFlyRankStarter.git</code>
+  </section>
+
+  <footer>
+    <p>
+      <strong>Acknowledgments &amp; data credit.</strong> Built on the FlyRank ML Internship
+      dataset — <a href="https://flyrank.ai" target="_blank" rel="noopener">flyrank.ai</a>.
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>
